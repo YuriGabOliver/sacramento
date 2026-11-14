@@ -1,0 +1,7 @@
+{
+  "name": "ficha-velho-oeste",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fichas de RPG de velho oeste com painel do mestre e convite por link.",
+  "engines": { "node": "20.x" }
+}

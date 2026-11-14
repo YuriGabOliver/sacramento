@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ficha – Velho Oeste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Alegreya:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#efe0bd;--card:#f8edd2;--ink:#2a1a10;--mute:#6d5238;--line:#2a1a10;--blood:#b3201b;--brass:#9a6a1f;--warn:#b3201b;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d140d;--card:#2a1d13;--ink:#f1e2c0;--mute:#c4a97d;--line:#c9a46a;--blood:#e0463d;--brass:#d9a64a;--warn:#ff7a70}}
+:root[data-theme="dark"]{--bg:#1d140d;--card:#2a1d13;--ink:#f1e2c0;--mute:#c4a97d;--line:#c9a46a;--blood:#e0463d;--brass:#d9a64a;--warn:#ff7a70}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 Alegreya,Georgia,serif}
+main{max-width:980px;margin:0 auto;padding:14px 14px 40px;display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:760px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+h1,h2{font-family:Rye,"Georgia",serif;font-weight:400;margin:0;letter-spacing:.02em}
+h1{font-size:2rem;text-align:center;padding:10px 0 0;grid-column:1/-1}
+h2{font-size:1.25rem;margin-bottom:8px}
+section{background:var(--card);border:2px solid var(--line);border-radius:6px;padding:12px 14px;box-shadow:3px 3px 0 var(--line)}
+label{display:block;font-size:.85rem;color:var(--mute)}
+input[type=text],input[type=password],textarea,select{width:100%;font:inherit;color:var(--ink);background:transparent;border:0;border-bottom:1.5px solid var(--line);padding:6px 2px;border-radius:0}
+textarea{border:1.5px solid var(--line);min-height:130px;padding:8px;border-radius:4px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+select option{background:var(--card);color:var(--ink)}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--mute)}
+.row:last-child{border-bottom:0}
+.row b{font-size:1.05rem}.row small{display:block;color:var(--mute);font-size:.82rem;line-height:1.2}
+.step{display:flex;align-items:center;gap:8px}
+.step button,.btn{min-width:44px;min-height:44px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:700 1.2rem Alegreya,serif;border-radius:6px;cursor:pointer}
+.step output{min-width:1.6ch;text-align:center;font-weight:700;font-size:1.3rem}
+.budget{font-size:.9rem;color:var(--mute);margin:4px 0 6px}.over{color:var(--warn);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.stats div{border:2px solid var(--line);border-radius:6px;padding:6px 2px}
+.stats b{display:block;font-size:1.6rem;line-height:1.1}.stats span{font-size:.78rem;color:var(--mute)}
+.dots{display:flex;flex-wrap:wrap;gap:6px}
+.dot{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:var(--mute);font-size:1.25rem;line-height:1;cursor:pointer;padding:0;display:grid;place-items:center}
+.dot.sm{width:36px;height:36px;font-size:1rem}
+.dot[aria-pressed=true]{background:var(--blood);border-color:var(--blood);color:#fff}
+.skills{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.skill{border-bottom:1px dashed var(--mute);padding-bottom:6px}
+.skill b{font-family:Rye,serif;font-weight:400;font-size:1.02rem}.skill small{color:var(--mute);margin-left:4px}
+.skill .dots{gap:4px;margin-top:4px}
+@media(max-width:420px){.skills{grid-template-columns:1fr}}
+.grid3{display:grid;grid-template-columns:1fr 64px 80px;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 64px;gap:6px}
+.pain{margin:10px 0 0;padding:0;list-style:none;font-size:.9rem}
+.pain li{padding:3px 0;border-top:1px dashed var(--mute)}.pain b{display:inline-block;min-width:8.2em}
+.note{font-size:.88rem;color:var(--mute);margin:6px 0 0}
+.fid{font-size:.95rem;margin-top:6px;min-height:2.6em}
+.top{display:flex;gap:8px;justify-content:center;grid-column:1/-1;flex-wrap:wrap}
+.btn{padding:0 14px;font-size:1rem}
+[hidden]{display:none!important}
+.bar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;grid-column:1/-1}
+.bar select{width:auto;max-width:62vw;border:2px solid var(--line);border-radius:6px;padding:10px;min-height:44px}
+.bar span{color:var(--mute);font-size:.9rem}
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.pc{border:2px solid var(--line);border-radius:6px;padding:10px;background:var(--bg)}
+.pc h3{margin:0;font:400 1.1rem Rye,serif}.pc small{color:var(--mute)}
+.pc p{margin:8px 0 0;font-size:.9rem}
+.pips{display:flex;gap:4px;flex-wrap:wrap;margin:3px 0}
+.pip{width:16px;height:16px;border-radius:50%;border:2px solid var(--line)}
+.pip.on{background:var(--ink)}.pip.hurt.on{background:var(--blood);border-color:var(--blood)}
+.pc .btn{margin-top:10px;width:100%;min-height:44px}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--card);padding:10px 14px;border-radius:6px;text-align:center;z-index:5}
+.form{display:grid;gap:10px;max-width:420px}
+.conv{border:2px dashed var(--line);border-radius:6px;padding:10px;margin:10px 0;display:grid;gap:8px}
+.conv input{border:1.5px solid var(--line);padding:10px;border-radius:4px}
+.conv div{display:flex;gap:8px;flex-wrap:wrap}
+details{margin-top:18px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
+</style>
+</head>
+<body>
+<main>
+<h1>Velho Oeste</h1>
+<div class="top"><button class="btn" id="novo">Limpar ficha</button><button class="btn" id="imp">Imprimir</button></div>
+
+<div class="bar" id="bar"></div>
+<section class="wide" id="mesa"><p>Conectando…</p></section>
+<section class="wide"><label for="nome">Nome do personagem</label><input type="text" id="nome" data-k="nome" autocomplete="off"></section>
+
+<section>
+ <h2>Atributos</h2>
+ <p class="budget" id="bAtr"></p>
+ <div id="atr"></div>
+</section>
+
+<section>
+ <h2>Resumo</h2>
+ <div class="stats">
+  <div><b id="sVida">6</b><span>Círculos de Vida</span></div>
+  <div><b id="sMov">1</b><span>Movimentos</span></div>
+  <div><b id="sAcao">1</b><span>Ações de Combate</span></div>
+  <div><b>5</b><span>Defesa</span></div>
+ </div>
+ <label for="ini" style="margin-top:12px">Iniciativa</label><input type="text" id="ini" data-k="ini" inputmode="numeric" autocomplete="off">
+</section>
+
+<section class="wide">
+ <h2>Antecedentes</h2>
+ <p class="budget" id="bAnt"></p>
+ <div class="skills" id="ant"></div>
+ <p class="note">Cada ponto vale +1 no 1d6. No nível 1, o máximo é 2 pontos por antecedente.</p>
+</section>
+
+<section>
+ <h2>Círculos de vida</h2>
+ <p class="budget">Toque numa caveira para perder vida. Toque de novo para recuperar.</p>
+ <div class="dots" id="vida"></div>
+</section>
+
+<section>
+ <h2>Círculos de dor</h2>
+ <div class="dots" id="dor"></div>
+ <ul class="pain">
+  <li><b>1 · Atordoamento</b>−1 Ação de Combate no próx. turno.</li>
+  <li><b>2 · Queda</b>Gaste 1 Movimento para levantar.</li>
+  <li><b>3 · Distração</b>Não pode atacar o mesmo alvo no próx. ataque.</li>
+  <li><b>4 · Sangramento</b>+1 dano por turno até o fim do combate.</li>
+  <li><b>5 · Intimidação</b>Se afaste do atacante no próx. turno.</li>
+  <li><b>6 · Desorientação</b>Testes de Violência −1 no próx. turno.</li>
+ </ul>
+</section>
+
+<section class="wide"><h2>Habilidades</h2><textarea id="hab" data-k="hab" aria-label="Habilidades"></textarea></section>
+
+<section class="wide">
+ <h2>Itens</h2>
+ <div class="grid2" id="itens"></div>
+ <h2 style="margin-top:16px">Armas</h2>
+ <div class="grid3" id="armas"></div>
+</section>
+
+<section class="wide">
+ <h2>Montaria</h2>
+ <p class="budget" id="bMon"></p>
+ <label for="mNome">Nome da montaria</label><input type="text" id="mNome" data-k="mNome" autocomplete="off">
+ <div id="mAtr" style="margin-top:8px"></div>
+ <p class="note">Potência: 1d6 + Potência + Montaria contra NA 6. Resistência: +1 Círculo de Vida por ponto.</p>
+ <h2 style="margin-top:14px">Círculos de dor da montaria</h2><div class="dots" id="mDor"></div>
+ <h2 style="margin-top:14px">Círculos de vida da montaria</h2><div class="dots" id="mVida"></div>
+ <h2 style="margin-top:14px">Nível de fidelidade</h2>
+ <select id="fid" data-k="fid" aria-label="Nível de fidelidade"></select>
+ <p class="fid" id="fidTxt"></p>
+</section>
+</main>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const KEY='ficha-velho-oeste-v1';
+const FID=['Montaria estranha: sem bônus.','Atende quando chamada pelo nome.','Ganha +1 ponto em um dos dois atributos à sua escolha.','Quando chamada, vai até você se estiver dentro de 500 m de raio.','Sem penalidades para saltar obstáculos perigosos.','Ganha +1 ponto em um dos dois atributos à sua escolha.'];
+const ATR=[['fis','Físico','+1 Círculo de Vida por ponto'],['vel','Velocidade','+1 Movimento por ponto'],['int','Intelecto','+1 ponto de Antecedente por ponto'],['cor','Coragem','+1 Ação de Combate por ponto']];
+const ANT=[['atencao','Atenção'],['roubo','Roubo'],['medicina','Medicina'],['suor','Suor'],['montaria','Montaria'],['tradicao','Tradição'],['negocios','Negócios'],['violencia','Violência']];
+const blank=()=>({nome:'',ini:'',hab:'',mNome:'',fid:'0',n:{fis:0,vel:0,int:0,cor:0,pot:0,res:0},ant:{},lost:0,dor:0,mLost:0,mDor:0,
+  it:Array.from({length:10},()=>['','']),ar:Array.from({length:4},()=>['','',''])});
+const $=id=>document.getElementById(id);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+const toast=m=>{const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,4500)};
+const stat=t=>{const e=$('st');if(e)e.textContent=t};
+const parse=s=>{try{return Object.assign(blank(),JSON.parse(s))}catch(e){return blank()}};
+let S=blank(),db=null,usr=null,me=null,isGM=false,cur=null,docs={},tm=null;
+function save(){
+  if(!db||!cur){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}return}
+  stat('Salvando…');clearTimeout(tm);tm=setTimeout(flush,600);
+}
+async function flush(){
+  clearTimeout(tm);tm=null;
+  if(!db||!cur)return;
+  const d=docs[cur.uid]=docs[cur.uid]||{chars:{}};
+  const chars=Object.assign({},d.chars);
+  chars[cur.id]={s:JSON.stringify(S),nome:S.nome||'Sem nome'};
+  d.chars=chars;
+  try{await call('salvar',{alvo:cur.uid,chars});stat('Salvo')}
+  catch(e){stat('Não salvou');toast('Não foi possível salvar. Confira sua conexão e suas permissões.')}
+}
+function stepper(box,list,max){
+  box.innerHTML='';
+  list.forEach(([k,nome,dica])=>{
+    const r=el('div','row'),l=el('div');l.append(el('b','',nome),el('small','',dica));
+    const st=el('div','step'),m=el('button','','−'),o=el('output','',S.n[k]),p=el('button','','+');
+    m.setAttribute('aria-label','Diminuir '+nome);p.setAttribute('aria-label','Aumentar '+nome);
+    m.onclick=()=>{S.n[k]=Math.max(0,S.n[k]-1);save();render()};
+    p.onclick=()=>{S.n[k]=Math.min(max,S.n[k]+1);save();render()};
+    st.append(m,o,p);r.append(l,st);box.append(r);
+  });
+}
+function dots(box,total,val,sm,onSet,label){
+  box.innerHTML='';
+  for(let i=0;i<total;i++){
+    const b=el('button','dot'+(sm?' sm':''),sm?'':'☠');
+    b.type='button';b.setAttribute('aria-pressed',i<val);b.setAttribute('aria-label',label+' '+(i+1));
+    b.onclick=()=>{onSet(val===i+1?i:i+1);save();render()};
+    box.append(b);
+  }
+}
+function budget(node,used,tot,txt){
+  node.textContent='';const s=el('span',used>tot?'over':'',used+' de '+tot);
+  node.append(txt+': ',s,used>tot?' (passou do limite)':'');
+}
+function render(){
+  const n=S.n,vida=6+n.fis,mov=1+n.vel,acao=1+n.cor,antPts=4+n.int,mVida=6+n.res;
+  stepper($('atr'),ATR,4);
+  budget($('bAtr'),n.fis+n.vel+n.int+n.cor,4,'Pontos de atributo usados');
+  $('sVida').textContent=vida;$('sMov').textContent=mov;$('sAcao').textContent=acao;
+  // antecedentes
+  const A=$('ant');A.innerHTML='';let usados=0;
+  ANT.forEach(([k,nome])=>{
+    const v=S.ant[k]||0;usados+=v;
+    const d=el('div','skill'),h=el('div');h.append(el('b','',nome),el('small','','1d6+'+v));
+    const box=el('div','dots');
+    dots(box,5,v,true,x=>{S.ant[k]=x},nome);
+    d.append(h,box);A.append(d);
+  });
+  budget($('bAnt'),usados,antPts,'Pontos de antecedente usados');
+  dots($('vida'),vida,Math.min(S.lost,vida),false,x=>{S.lost=x},'Círculo de vida');
+  dots($('dor'),6,S.dor,false,x=>{S.dor=x},'Círculo de dor');
+  // montaria
+  const mb=$('mAtr');mb.innerHTML='';
+  const mk=[['pot','Potência','1d6 + Potência + Montaria'],['res','Resistência','+1 Círculo de Vida por ponto']];
+  stepper(mb,mk,3);
+  budget($('bMon'),n.pot+n.res,3,'Pontos da montaria usados');
+  dots($('mDor'),6,S.mDor,false,x=>{S.mDor=x},'Círculo de dor da montaria');
+  dots($('mVida'),mVida,Math.min(S.mLost,mVida),false,x=>{S.mLost=x},'Círculo de vida da montaria');
+  $('fidTxt').textContent=FID[+S.fid||0];
+}
+// campos da ficha
+document.querySelectorAll('[data-k]').forEach(i=>{
+  if(i.id==='fid')FID.forEach((_,k)=>{const o=el('option','',k===0?'0 – Sem vínculo':String(k));o.value=k;i.append(o)});
+  i.addEventListener('input',()=>{S[i.dataset.k]=i.value;if(i.id==='fid')$('fidTxt').textContent=FID[+i.value||0];save()});
+});
+function loadSheet(){
+  document.querySelectorAll('[data-k]').forEach(i=>{i.value=S[i.dataset.k]||''});
+  const gi=$('itens');gi.innerHTML='';gi.append(el('label','','Item'),el('label','','Espaço'));
+  S.it.forEach((r,i)=>[0,1].forEach(c=>{const x=document.createElement('input');x.type='text';x.value=r[c];x.setAttribute('aria-label',(c?'Espaço do item ':'Item ')+(i+1));if(c)x.inputMode='numeric';x.oninput=()=>{S.it[i][c]=x.value;save()};gi.append(x)}));
+  const ga=$('armas');ga.innerHTML='';ga.append(el('label','','Arma'),el('label','','Espaço'),el('label','','Dano'));
+  S.ar.forEach((r,i)=>[0,1,2].forEach(c=>{const x=document.createElement('input');x.type='text';x.value=r[c];x.setAttribute('aria-label',['Arma ','Espaço da arma ','Dano da arma '][c]+(i+1));x.oninput=()=>{S.ar[i][c]=x.value;save()};ga.append(x)}));
+}
+$('novo').onclick=()=>{if(confirm('Apagar todos os dados desta ficha?')){S=blank();save();loadSheet();render()}};
+$('imp').onclick=()=>window.print();
+
+// telas
+function show(v){$('mesa').hidden=v!=='mesa';document.querySelectorAll('main>section:not(#mesa)').forEach(s=>s.hidden=v==='mesa')}
+const newId=()=>'c'+Date.now().toString(36);
+function openChar(uid,id){cur={uid,id};S=parse(docs[uid].chars[id].s);loadSheet();render();show('ficha');bar()}
+function bar(){
+  const b=$('bar');b.innerHTML='';
+  if(!db){b.append(el('span','','Modo local: a ficha fica só neste aparelho. Abra pelo link, conectado à sua conta, para guardá-la na mesa.'));return}
+  const st=el('span','','');st.id='st';
+  if(isGM&&!cur){b.append(el('span','','Você é o mestre desta mesa.'),st);return}
+  if(isGM){
+    const v=el('button','btn','Voltar à mesa');v.onclick=async()=>{await flush();cur=null;show('mesa');bar();panel();atualizar().catch(()=>{})};
+    b.append(v,el('span','','Ficha de '+(curName||'jogador')),st);return;
+  }
+  const ch=docs[me.id].chars,sel=document.createElement('select');sel.setAttribute('aria-label','Personagem');
+  Object.keys(ch).forEach(k=>{const o=el('option','',ch[k].nome||'Sem nome');o.value=k;if(k===cur.id)o.selected=true;sel.append(o)});
+  sel.onchange=async()=>{await flush();openChar(me.id,sel.value)};
+  const n=el('button','btn','Nova ficha');n.onclick=async()=>{await flush();const id=newId();docs[me.id].chars[id]={s:JSON.stringify(blank()),nome:'Sem nome'};cur={uid:me.id,id};S=blank();await flush();openChar(me.id,id)};
+  const x=el('button','btn','Excluir');x.onclick=async()=>{
+    if(!confirm('Excluir esta ficha de vez?'))return;
+    const chars=Object.assign({},docs[me.id].chars);delete chars[cur.id];
+    if(!Object.keys(chars).length)chars[newId()]={s:JSON.stringify(blank()),nome:'Sem nome'};
+    docs[me.id].chars=chars;
+    try{await call('salvar',{alvo:me.id,chars})}catch(e){toast('Não foi possível excluir.')}
+    openChar(me.id,Object.keys(chars)[0])};
+  const lk=el('button','btn','Meu link de acesso');lk.onclick=()=>{copiar(location.origin+'/#acesso='+auth.id+'.'+auth.token);toast('Link copiado. Guarde-o: quem tiver esse link entra como você, em qualquer aparelho.')};
+  b.append(sel,n,x,lk,st);
+}
+let curName='';
+const pips=(tot,on,hurt)=>{const d=el('div','pips');for(let i=0;i<tot;i++)d.append(el('span','pip'+(i<on?' on':'')+(hurt?' hurt':'')));return d};
+function panel(){
+  const box=$('cartoes');if(!box)return;box.innerHTML='';
+  const uids=Object.keys(docs);
+  if(!uids.length){box.append(el('p','','Nenhum jogador entrou ainda. Use "Convidar jogadores" e envie o link.'));return}
+  const g=el('div','cards');
+  uids.sort((a,b)=>(docs[a].nome||'').localeCompare(docs[b].nome||'')).forEach(u=>{
+    const ids=Object.keys(docs[u].chars||{});
+    if(!ids.length){const c=el('div','pc');c.append(el('h3','',docs[u].nome),el('small','','ainda sem ficha'));g.append(c)}
+    ids.forEach(id=>{
+      const s=parse(docs[u].chars[id].s),n=s.n,v=6+n.fis,mv=6+n.res,lost=Math.min(s.lost,v),mlost=Math.min(s.mLost,mv);
+      const c=el('div','pc');
+      c.append(el('h3','',docs[u].chars[id].nome||'Sem nome'),el('small','',docs[u].nome||'Jogador'));
+      c.append(el('p','','Vida '+(v-lost)+' de '+v),pips(v,v-lost,false));
+      c.append(el('p','','Dor '+s.dor+' de 6'),pips(6,s.dor,true));
+      if(s.mNome||n.pot||n.res||s.mLost||s.mDor)c.append(el('p','','Montaria'+(s.mNome?' ('+s.mNome+')':'')+': vida '+(mv-mlost)+' de '+mv+', dor '+s.mDor+' de 6'));
+      const o=el('button','btn','Abrir ficha');o.onclick=()=>{curName=docs[u].nome;openChar(u,id)};
+      c.append(o);g.append(c);
+    });
+  });
+  box.append(g);
+}
+const copiar=async t=>{try{await navigator.clipboard.writeText(t);return true}catch(e){return false}};
+const auth={mestre:'',id:'',token:''};
+try{auth.mestre=sessionStorage.getItem('ficha-mestre')||'';const a=JSON.parse(localStorage.getItem('ficha-acesso')||'null');if(a&&a.id){auth.id=a.id;auth.token=a.token}}catch(e){}
+async function call(acao,dados){
+  const hd={'content-type':'application/json'};
+  if(auth.mestre)hd['x-mestre']=auth.mestre;
+  if(auth.id){hd['x-jogador']=auth.id;hd['x-token']=auth.token}
+  const body=JSON.stringify(Object.assign({acao},dados));
+  let r;try{r=await fetch('/api/mesa',{method:'POST',headers:hd,body,keepalive:body.length<60000})}
+  catch(e){throw Object.assign(new Error('Sem conexão com o servidor.'),{status:0})}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw Object.assign(new Error(j.erro||'Erro no servidor.'),{status:r.status});
+  return j;
+}
+function campo(box,rotulo,tipo){const l=el('label','',rotulo),i=document.createElement('input');i.type=tipo;i.autocomplete=tipo==='password'?'current-password':'off';l.append(i);box.append(l);return i}
+function entrada(){
+  show('mesa');$('bar').innerHTML='';
+  const box=$('mesa');box.innerHTML='';
+  const cod=new URLSearchParams(location.search).get('convite');
+  box.append(el('h2','',cod?'Entrar na mesa':'Velho Oeste'));
+  const f=el('div','form');
+  if(cod){
+    f.append(el('p','','Você foi convidado para a mesa. Escreva seu nome para criar suas fichas.'));
+    const i=campo(f,'Seu nome','text');i.maxLength=40;
+    const b=el('button','btn','Entrar na mesa');
+    const ir=async()=>{try{const r=await call('entrar',{codigo:cod,nome:i.value});
+      auth.id=r.id;auth.token=r.token;auth.mestre='';try{localStorage.setItem('ficha-acesso',JSON.stringify({id:r.id,token:r.token}))}catch(e){}
+      history.replaceState(null,'',location.pathname);init()}catch(e){toast(e.message)}};
+    b.onclick=ir;i.onkeydown=e=>{if(e.key==='Enter')ir()};f.append(b);
+  }else f.append(el('p','','Para jogar, abra o link de convite que o mestre enviou.'));
+  box.append(f);
+  const d=el('details');d.append(el('summary','','Sou o mestre'));
+  const g=el('div','form');const s=campo(g,'Senha do mestre','password');const b2=el('button','btn','Entrar como mestre');
+  const ir2=async()=>{auth.mestre=s.value;try{await call('eu');try{sessionStorage.setItem('ficha-mestre',auth.mestre)}catch(e){}init()}catch(e){auth.mestre='';toast(e.status===401?'Senha incorreta.':e.message)}};
+  b2.onclick=ir2;s.onkeydown=e=>{if(e.key==='Enter')ir2()};g.append(b2);d.append(g);box.append(d);
+}
+async function atualizar(){
+  const r=await call('listar');docs={};r.jogadores.forEach(j=>{docs[j.id]={nome:j.nome,chars:j.chars}});
+  if(!cur)panel();
+}
+function montarMesa(){
+  const box=$('mesa');box.innerHTML='';box.append(el('h2','','Mesa'));
+  const tools=el('div','bar');const bc=el('button','btn','Convidar jogadores');tools.append(bc);
+  const sair=el('button','btn','Sair');sair.onclick=()=>{sessionStorage.removeItem('ficha-mestre');auth.mestre='';location.reload()};tools.append(sair);
+  box.append(tools);
+  const cv=el('div','conv');cv.hidden=true;
+  const inp=document.createElement('input');inp.readOnly=true;inp.setAttribute('aria-label','Link de convite');
+  const bt=el('div');const cp=el('button','btn','Copiar link'),sh=el('button','btn','Compartilhar'),nv=el('button','btn','Gerar novo link');
+  const link=c=>location.origin+'/?convite='+c;
+  const carregar=async novo=>{try{const r=await call('convite',{novo});inp.value=link(r.codigo)}catch(e){toast(e.message)}};
+  bc.onclick=async()=>{cv.hidden=!cv.hidden;if(!cv.hidden&&!inp.value)await carregar(false)};
+  cp.onclick=async()=>{inp.select();toast((await copiar(inp.value))?'Link copiado.':'Copie o link manualmente.')};
+  sh.onclick=()=>{if(navigator.share)navigator.share({title:'Mesa de RPG – Velho Oeste',text:'Entre na mesa e crie sua ficha:',url:inp.value}).catch(()=>{});else cp.onclick()};
+  nv.onclick=async()=>{if(confirm('Gerar um novo link? O link antigo deixa de funcionar. Quem já entrou continua na mesa.'))await carregar(true)};
+  bt.append(cp,sh,nv);cv.append(el('p','','Envie este link aos jogadores. Quem abrir informa o nome e já pode criar fichas.'),inp,bt);box.append(cv);
+  const ct=el('div');ct.id='cartoes';box.append(ct);
+}
+async function init(){
+  const m=location.hash.match(/^#acesso=([\w-]+)\.([\w-]+)$/);
+  if(m){auth.id=m[1];auth.token=m[2];auth.mestre='';try{sessionStorage.removeItem('ficha-mestre');localStorage.setItem('ficha-acesso',JSON.stringify({id:m[1],token:m[2]}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
+  show('mesa');$('mesa').innerHTML='<p>Conectando…</p>';
+  let eu=null;
+  if(auth.mestre||auth.id){
+    try{eu=await call('eu')}catch(e){
+      if(e.status!==401){$('mesa').textContent=e.message;const r=el('button','btn','Tentar de novo');r.onclick=init;$('mesa').append(el('br'),r);return}
+      auth.mestre='';auth.id='';auth.token='';try{sessionStorage.removeItem('ficha-mestre');localStorage.removeItem('ficha-acesso')}catch(e2){}
+    }
+  }
+  if(!eu){entrada();return}
+  db=true;isGM=eu.papel==='mestre';
+  if(isGM){
+    montarMesa();bar();
+    try{await atualizar()}catch(e){toast(e.message)}
+    if(!init.t)init.t=setInterval(()=>{if(!document.hidden&&!cur&&isGM)atualizar().catch(()=>{})},5000);
+    return;
+  }
+  me={id:eu.id,nome:eu.nome};
+  let r;try{r=await call('minhas')}catch(e){toast(e.message);r={chars:{}}}
+  docs[me.id]={nome:eu.nome,chars:r.chars||{}};
+  if(!Object.keys(docs[me.id].chars).length){
+    let first=blank();try{const x=localStorage.getItem(KEY);if(x)first=parse(x)}catch(e){}
+    const id=newId();docs[me.id].chars[id]={s:JSON.stringify(first),nome:first.nome||'Sem nome'};cur={uid:me.id,id};S=first;await flush();
+  }
+  openChar(me.id,Object.keys(docs[me.id].chars)[0]);
+}
+window.addEventListener('pagehide',()=>{if(tm)flush()});
+init();
+</script>
+</body>
+</html>
