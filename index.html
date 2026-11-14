@@ -296,6 +296,17 @@ function panel(){
     });
   });
   box.append(g);
+  const lj=el('div','conv');lj.append(el('h2','','Jogadores'));
+  uids.forEach(u=>{
+    const r=el('div','row');r.append(el('b','',docs[u].nome||'Jogador'));
+    const x=el('button','btn','Excluir jogador');x.style.borderColor='var(--blood)';x.style.color='var(--blood)';
+    x.onclick=async()=>{
+      if(!confirm('Excluir o jogador "'+(docs[u].nome||'Jogador')+'" e todas as fichas dele? Isso não pode ser desfeito.'))return;
+      try{await call('remover',{alvo:u});delete docs[u];panel();toast('Jogador excluído.')}catch(e){toast(e.message)}
+    };
+    r.append(x);lj.append(r);
+  });
+  box.append(lj);
 }
 const copiar=async t=>{try{await navigator.clipboard.writeText(t);return true}catch(e){return false}};
 const auth={mestre:'',id:'',token:''};
