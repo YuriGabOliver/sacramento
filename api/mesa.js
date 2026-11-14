@@ -98,6 +98,16 @@ module.exports = async (req, res) => {
         await pipe([['DEL', 'jog:' + b.alvo], ['DEL', 'fichas:' + b.alvo], ['SREM', 'jogadores', b.alvo]]);
         return res.json({ ok: true });
       }
+      case 'excluir_ficha': {
+        if (!ehMestre) return erro(401, 'Só o mestre pode excluir fichas.');
+        if (!idOk(b.alvo) || !idOk(b.id)) return erro(400, 'Ficha inválida.');
+        const f = lerJson(await cmd('GET', 'fichas:' + b.alvo)) || { chars: {} };
+        const chars = Object.assign({}, f.chars);
+        if (!Object.prototype.hasOwnProperty.call(chars, b.id)) return erro(404, 'Ficha não encontrada.');
+        delete chars[b.id];
+        await cmd('SET', 'fichas:' + b.alvo, JSON.stringify({ chars }));
+        return res.json({ ok: true });
+      }
       default:
         return erro(400, 'Ação desconhecida.');
     }

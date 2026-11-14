@@ -286,7 +286,13 @@ function panel(){
       c.append(el('p','','Dor '+s.dor+' de 6'),pips(6,s.dor,true));
       if(s.mNome||n.pot||n.res||s.mLost||s.mDor)c.append(el('p','','Montaria'+(s.mNome?' ('+s.mNome+')':'')+': vida '+(mv-mlost)+' de '+mv+', dor '+s.mDor+' de 6'));
       const o=el('button','btn','Abrir ficha');o.onclick=()=>{curName=docs[u].nome;openChar(u,id)};
-      c.append(o);g.append(c);
+      c.append(o);
+      const x=el('button','btn','Excluir ficha');x.style.borderColor='var(--blood)';x.style.color='var(--blood)';
+      x.onclick=async()=>{
+        if(!confirm('Excluir a ficha "'+(docs[u].chars[id].nome||'Sem nome')+'" de '+(docs[u].nome||'jogador')+'? Isso não pode ser desfeito.'))return;
+        try{await call('excluir_ficha',{alvo:u,id});delete docs[u].chars[id];panel();toast('Ficha excluída.')}catch(e){toast(e.message)}
+      };
+      c.append(x);g.append(c);
     });
   });
   box.append(g);
