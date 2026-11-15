@@ -161,19 +161,21 @@ const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==u
 const toast=m=>{const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,4500)};
 const stat=t=>{const e=$('st');if(e)e.textContent=t};
 const parse=s=>{try{return Object.assign(blank(),JSON.parse(s))}catch(e){return blank()}};
-let S=blank(),db=null,usr=null,me=null,isGM=false,cur=null,docs={},tm=null;
+let S=blank(),db=null,usr=null,me=null,isGM=false,cur=null,docs={},tm=null,editVersion=0,masterDirty=false;
 function save(){
   if(!db||!cur){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}return}
+  if(isGM){editVersion++;masterDirty=true}
   stat('Salvando…');clearTimeout(tm);tm=setTimeout(flush,600);
 }
 async function flush(){
   clearTimeout(tm);tm=null;
   if(!db||!cur)return;
+  const version=editVersion;
   const d=docs[cur.uid]=docs[cur.uid]||{chars:{}};
   const chars=Object.assign({},d.chars);
   chars[cur.id]={s:JSON.stringify(S),nome:S.nome||'Sem nome'};
   d.chars=chars;
-  try{await call('salvar',{alvo:cur.uid,chars});stat('Salvo')}
+  try{await call('salvar',{alvo:cur.uid,chars});stat('Salvo');if(isGM&&version===editVersion)masterDirty=false}
   catch(e){stat('Não salvou');toast('Não foi possível salvar. Confira sua conexão e suas permissões.')}
 }
 function stepper(box,list,max){
@@ -345,7 +347,14 @@ function entrada(){
   b2.onclick=ir2;s.onkeydown=e=>{if(e.key==='Enter')ir2()};g.append(b2);d.append(g);box.append(d);
 }
 async function atualizar(){
-  const r=await call('listar');docs={};r.jogadores.forEach(j=>{docs[j.id]={nome:j.nome,chars:j.chars}});
+  const version=editVersion;
+  const podeAtualizarFichaInicial=isGM&&cur&&!masterDirty&&!tm;
+  const anterior=cur&&docs[cur.uid]&&docs[cur.uid].chars&&docs[cur.uid].chars[cur.id];
+  const r=await call('listar');const novos={};r.jogadores.forEach(j=>{novos[j.id]={nome:j.nome,chars:j.chars}});
+  const ficha=cur&&novos[cur.uid]&&novos[cur.uid].chars&&novos[cur.uid].chars[cur.id];
+  const podeAtualizarFicha=podeAtualizarFichaInicial&&ficha&&!masterDirty&&!tm&&version===editVersion;
+  docs=novos;
+  if(podeAtualizarFicha&&anterior&&anterior.s!==ficha.s){S=parse(ficha.s);loadSheet();render()}
   if(!cur)panel();
 }
 function montarMesa(){
@@ -388,7 +397,7 @@ async function init(){
   if(isGM){
     montarMesa();bar();
     try{await atualizar()}catch(e){toast(e.message)}
-    if(!init.t)init.t=setInterval(()=>{if(!document.hidden&&!cur&&isGM)atualizar().catch(()=>{})},5000);
+    if(!init.t)init.t=setInterval(()=>{if(!document.hidden&&isGM)atualizar().catch(()=>{})},3000);
     return;
   }
   me={id:eu.id,nome:eu.nome};
