@@ -108,6 +108,50 @@ module.exports = async (req, res) => {
         await cmd('SET', 'fichas:' + b.alvo, JSON.stringify({ chars }));
         return res.json({ ok: true });
       }
+      case 'canalha_novo': {
+        if (!ehMestre) return erro(401, 'Só o mestre pode criar canalhas.');
+        if (typeof b.s !== 'string' || b.s.length > 30000) return erro(400, 'Dados inválidos.');
+        if ((await cmd('SCARD', 'canalhas')) >= 200) return erro(403, 'Canalhas demais.');
+        const id = rnd(9), chave = rnd(16);
+        await pipe([['SET', 'canalha:' + id, JSON.stringify({ chave, s: b.s })], ['SADD', 'canalhas', id]]);
+        return res.json({ id, chave });
+      }
+      case 'canalha_listar': {
+        if (!ehMestre) return erro(401, 'Só o mestre pode ver os canalhas.');
+        const ids = (await cmd('SMEMBERS', 'canalhas')) || [];
+        if (!ids.length) return res.json({ canalhas: [] });
+        const r = await pipe(ids.map((i) => ['GET', 'canalha:' + i]));
+        const canalhas = ids.map((id, k) => { const o = lerJson(r[k]); return o ? { id, chave: o.chave, s: o.s } : null; }).filter(Boolean);
+        return res.json({ canalhas });
+      }
+      case 'canalha_ver': {
+        if (!idOk(b.id)) return erro(400, 'Link inválido.');
+        const o = lerJson(await cmd('GET', 'canalha:' + b.id));
+        if (!o || !(ehMestre || igual(b.chave || '', o.chave))) return erro(401, 'Link inválido ou vencido. Peça um novo ao mestre.');
+        return res.json({ id: b.id, s: o.s });
+      }
+      case 'canalha_salvar': {
+        if (!idOk(b.id) || typeof b.s !== 'string' || b.s.length > 30000) return erro(400, 'Dados inválidos.');
+        const o = lerJson(await cmd('GET', 'canalha:' + b.id));
+        if (!o || !(ehMestre || igual(b.chave || '', o.chave))) return erro(401, 'Não autorizado.');
+        await cmd('SET', 'canalha:' + b.id, JSON.stringify({ chave: o.chave, s: b.s }));
+        return res.json({ ok: true });
+      }
+      case 'canalha_chave_nova': {
+        if (!ehMestre) return erro(401, 'Só o mestre pode gerar novo link.');
+        if (!idOk(b.id)) return erro(400, 'Canalha inválido.');
+        const o = lerJson(await cmd('GET', 'canalha:' + b.id));
+        if (!o) return erro(404, 'Canalha não encontrado.');
+        const chave = rnd(16);
+        await cmd('SET', 'canalha:' + b.id, JSON.stringify({ chave, s: o.s }));
+        return res.json({ chave });
+      }
+      case 'canalha_excluir': {
+        if (!ehMestre) return erro(401, 'Só o mestre pode excluir canalhas.');
+        if (!idOk(b.id)) return erro(400, 'Canalha inválido.');
+        await pipe([['DEL', 'canalha:' + b.id], ['SREM', 'canalhas', b.id]]);
+        return res.json({ ok: true });
+      }
       default:
         return erro(400, 'Ação desconhecida.');
     }
