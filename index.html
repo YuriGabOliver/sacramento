@@ -71,7 +71,11 @@ select option{background:var(--card);color:var(--ink)}
 .conv input{border:1.5px solid var(--line);padding:10px;border-radius:4px}
 .conv div{display:flex;gap:8px;flex-wrap:wrap}
 details{margin-top:18px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
-</style>
+.npc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}
+.npc-stats div{border:1.5px solid var(--line);border-radius:5px;padding:8px;text-align:center}
+.npc-stats b{display:block;font-size:1.25rem}.npc-stats span{color:var(--mute);font-size:.88rem}
+.npc-skills{display:grid;gap:10px}.npc-skill{border-bottom:1px dashed var(--mute);padding:8px 0}.npc-skill p{margin:4px 0;color:var(--mute)}
+.npc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.npc-actions .btn{flex:1}</style>
 </head>
 <body>
 <main>
@@ -80,6 +84,7 @@ details{margin-top:18px}summary{cursor:pointer;min-height:44px;display:flex;alig
 
 <div class="bar" id="bar"></div>
 <section class="wide" id="mesa"><p>Conectando…</p></section>
+<section class="wide" id="canalha-sheet" hidden><div id="canalha-public"></div></section>
 <section class="wide"><label for="nome">Nome do personagem</label><input type="text" id="nome" data-k="nome" autocomplete="off"></section>
 
 <section>
@@ -244,7 +249,7 @@ $('novo').onclick=()=>{if(confirm('Apagar todos os dados desta ficha?')){S=blank
 $('imp').onclick=()=>window.print();
 
 // telas
-function show(v){$('mesa').hidden=v!=='mesa';document.querySelectorAll('main>section:not(#mesa)').forEach(s=>s.hidden=v==='mesa')}
+function show(v){$('mesa').hidden=v!=='mesa';document.querySelectorAll('main>section:not(#mesa)').forEach(s=>s.hidden=v==='mesa'||(v==='canalha'?s.id!=='canalha-sheet':s.id==='canalha-sheet'))}
 const newId=()=>'c'+Date.now().toString(36);
 function openChar(uid,id){cur={uid,id};S=parse(docs[uid].chars[id].s);loadSheet();render();show('ficha');bar()}
 function bar(){
@@ -356,8 +361,10 @@ async function atualizar(){
   docs=novos;
   if(podeAtualizarFicha&&anterior&&anterior.s!==ficha.s){S=parse(ficha.s);loadSheet();render()}
   if(!cur)panel();
+  if(isGM&&(activeTab==='canalhas'||canalhaAtualId))await atualizarCanalhas();
 }
 function montarMesa(){
+  activeTab='jogadores';
   const box=$('mesa');box.innerHTML='';box.append(el('h2','','Mesa'));
   const tools=el('div','bar');
   const refresh=el('button','btn','Atualizar fichas');
@@ -379,9 +386,97 @@ function montarMesa(){
   sh.onclick=()=>{if(navigator.share)navigator.share({title:'Mesa de RPG – Velho Oeste',text:'Entre na mesa e crie sua ficha:',url:inp.value}).catch(()=>{});else cp.onclick()};
   nv.onclick=async()=>{if(confirm('Gerar um novo link? O link antigo deixa de funcionar. Quem já entrou continua na mesa.'))await carregar(true)};
   bt.append(cp,sh,nv);cv.append(el('p','','Envie este link aos jogadores. Quem abrir informa o nome e já pode criar fichas.'),inp,bt);box.append(cv);
-  const ct=el('div');ct.id='cartoes';box.append(ct);
+  const tabBar=el('div','bar');
+  const jogadoresTab=el('button','btn','Jogadores'),canalhasTab=el('button','btn','Canalhas e Patifes');
+  tabBar.append(jogadoresTab,canalhasTab);
+  const jogadoresPane=el('div');jogadoresPane.id='jogadores-pane';
+  const ct=el('div');ct.id='cartoes';jogadoresPane.append(ct);
+  const canalhasPane=el('div');canalhasPane.id='canalhas-pane';canalhasPane.hidden=true;
+  const criar=el('button','btn','Criar canalha');criar.onclick=criarCanalha;
+  const manager=el('div');manager.id='canalha-manager';canalhasPane.append(criar,manager);
+  jogadoresTab.onclick=()=>{activeTab='jogadores';jogadoresPane.hidden=false;canalhasPane.hidden=true};
+  canalhasTab.onclick=()=>{activeTab='canalhas';jogadoresPane.hidden=true;canalhasPane.hidden=false;atualizarCanalhas().catch(e=>toast(e.message))};
+  box.append(tabBar,jogadoresPane,canalhasPane);
+}
+const HABILIDADES_CANALHA=[
+  ['ameaca','Ameaça Covarde','Anuncia uma tragédia iminente contra inocentes antes da iniciativa; se o vilão for atacado, ela acontece após uma rodada.'],
+  ['escudo','Escudo Humano','Em local cheio, usa uma ação para se proteger com uma pessoa próxima; tiros que não superam a Defesa podem atingir essa pessoa.'],
+  ['balas','Balas Envenenadas','Quem for atingido testa Físico; se falhar, além do dano da arma perde 1 círculo de vida por turno.'],
+  ['espora','Espora Afiada','Montado, escolhe o melhor de 2d6 para galopar, fugir, saltar ou controlar a montaria; ela sofre 1 Círculo de Dor.'],
+  ['fuga','Fuga Infeliz','Abaixo da metade da vida, gasta as ações do turno para fugir; o próximo PJ tenta Velocidade NA 8 para impedir.'],
+  ['arsenal','Mestre Arsenal','Tem armas pesadas e capangas NdC 2 para usá-las; os testes de ataque são feitos pelos capangas.'],
+  ['olho','Olho Morto','Ignora bônus de cobertura ao atirar, desde que não se mova nem esteja em cobertura.'],
+  ['sina','Roubo de Sina','Em um Duelo, usa uma carta do oponente como se fosse sua; se ainda perder, morre instantaneamente.'],
+  ['supremacia','Supremacia','Uma vez por combate, gasta ações para fazer aliados receberem ataques em seu lugar.']
+];
+let canalhaSaveQueue=Promise.resolve();let canalhas=[],activeTab='jogadores',canalhaAtualId='',canalhaAtual=null,canalhaChave='',canalhaPublica=false,canalhaDirty=false,canalhaVersion=0,canalhaTimer=null,canalhaSnapshot='';
+const canalhaVazia=()=>({nome:'',tipo:'Comum',ndc:1,vidaPerdida:0,dor:0,habilidades:[],anotacoes:''});
+function lerCanalha(s){try{return Object.assign(canalhaVazia(),JSON.parse(s))}catch(e){return canalhaVazia()}}
+function slotsCanalha(n){return n<=2?1:n<=4?2:n===5?4:5}
+function maxVidaCanalha(s){return s.ndc*(s.tipo==='Especial'?6:3)}
+function salvarCanalha(versao){
+  const id=canalhaAtualId,chave=canalhaChave,texto=JSON.stringify(canalhaAtual);
+  canalhaSaveQueue=canalhaSaveQueue.catch(()=>{}).then(()=>call('canalha_salvar',{id,chave,s:texto}));
+  return canalhaSaveQueue.then(()=>{canalhaSnapshot=texto;if(versao===canalhaVersion)canalhaDirty=false;const st=$('canalha-save-status');if(st)st.textContent='Salvo';return true}).catch(e=>{const st=$('canalha-save-status');if(st)st.textContent='Não salvou';toast('Não foi possível salvar a ficha do canalha: '+e.message);return false});
+}
+function marcarCanalha(){
+  canalhaDirty=true;const versao=++canalhaVersion;clearTimeout(canalhaTimer);
+  canalhaTimer=setTimeout(()=>{canalhaTimer=null;salvarCanalha(versao)},600);
+  const st=$('canalha-save-status');if(st)st.textContent='Salvando…';
+}
+async function flushCanalha(){
+  clearTimeout(canalhaTimer);canalhaTimer=null;
+  if(!canalhaAtualId||!canalhaAtual||!canalhaDirty)return true;
+  return await salvarCanalha(canalhaVersion);
+}function atualizarResumoCanalha(box,s){
+  box.innerHTML='';const max=maxVidaCanalha(s),vida=Math.max(0,max-(+s.vidaPerdida||0)),acoes=+s.ndc+(s.tipo==='Especial'?3:1);
+  [['Vida',vida+' / '+max],['Defesa','5'],['Teste e ataque','1d6 + '+s.ndc],['Ações por turno',acoes]].forEach(([label,val])=>{const d=el('div');d.append(el('b','',val),el('span','',label));box.append(d)});
+}
+function desenharCirculosCanalha(box,total,marcados,chave){
+  box.innerHTML='';for(let i=0;i<total;i++){const b=el('button','dot',i<marcados?'☠':'');b.type='button';b.setAttribute('aria-pressed',i<marcados);b.setAttribute('aria-label',(chave==='vidaPerdida'?'Círculo de vida ':'Círculo de dor ')+(i+1));b.onclick=()=>{canalhaAtual[chave]=i<canalhaAtual[chave]?i:i+1;marcarCanalha();renderEditorCanalha(document.getElementById(canalhaPublica?'canalha-public':'canalha-manager'),canalhaPublica)};box.append(b)}
+}
+function renderEditorCanalha(root,publico){
+  if(!root||!canalhaAtual)return;root.innerHTML='';const wrap=el('div','conv'),head=el('div','npc-actions');
+  if(!publico){const back=el('button','btn','Voltar à lista');back.onclick=async()=>{if(!await flushCanalha())return;canalhaAtualId='';canalhaAtual=null;canalhaChave='';renderListaCanalhas()};head.append(back)}
+  const title=el('h2','',publico?'Ficha de canalha':'Ficha do canalha');wrap.append(head,title);
+  const form=el('div','form');
+  const nl=el('label','','Nome do canalha');const nome=el('input');nome.type='text';nome.maxLength=60;nome.value=canalhaAtual.nome||'';nome.autocomplete='off';nl.append(nome);form.append(nl);
+  const tl=el('label','','Tipo');const tipo=document.createElement('select');['Comum','Especial'].forEach(v=>{const o=el('option','',v);o.value=v;tipo.append(o)});tipo.value=canalhaAtual.tipo;tl.append(tipo);form.append(tl);
+  const nlvl=el('label','','Nível de Canalhice (NdC)');const ndc=document.createElement('select');for(let i=1;i<=6;i++){const o=el('option','',String(i));o.value=String(i);ndc.append(o)}ndc.value=String(canalhaAtual.ndc);nlvl.append(ndc);form.append(nlvl);wrap.append(form);
+  const stats=el('div','npc-stats');atualizarResumoCanalha(stats,canalhaAtual);wrap.append(stats);
+  const life=el('div','conv');life.append(el('h2','','Círculos de vida'));const lp=el('p','note','Toque para marcar ou recuperar vida.');life.append(lp);const ltrack=el('div','dots');life.append(ltrack);desenharCirculosCanalha(ltrack,maxVidaCanalha(canalhaAtual),+canalhaAtual.vidaPerdida||0,'vidaPerdida');wrap.append(life);
+  const pain=el('div','conv');pain.append(el('h2','','Círculos de dor'));const ptrack=el('div','dots');pain.append(ptrack);desenharCirculosCanalha(ptrack,6,+canalhaAtual.dor||0,'dor');wrap.append(pain);
+  if(canalhaAtual.tipo==='Especial'){
+    const skills=el('div','conv');skills.append(el('h2','','Habilidades de vilão'));const grid=el('div','npc-skills');const count=slotsCanalha(+canalhaAtual.ndc);canalhaAtual.habilidades=(canalhaAtual.habilidades||[]).slice(0,count);
+    for(let i=0;i<count;i++){const card=el('div','npc-skill');const label=el('label','','Habilidade '+(i+1));const select=document.createElement('select');select.setAttribute('aria-label','Habilidade '+(i+1));select.append(el('option','','Escolha uma habilidade'));select.options[0].value='';const used=canalhaAtual.habilidades.filter((v,k)=>k!==i);HABILIDADES_CANALHA.forEach(([id,n])=>{if(!used.includes(id)){const o=el('option','',n);o.value=id;select.append(o)}});select.value=canalhaAtual.habilidades[i]||'';label.append(select);card.append(label);const chosen=HABILIDADES_CANALHA.find(h=>h[0]===select.value);if(chosen)card.append(el('p','',chosen[2]));select.onchange=()=>{canalhaAtual.habilidades[i]=select.value;canalhaSnapshot='';marcarCanalha();renderEditorCanalha(root,publico)};grid.append(card)}skills.append(grid);wrap.append(skills)
+  }
+  const notes=el('div','conv');notes.append(el('h2','','Anotações'));const ta=document.createElement('textarea');ta.setAttribute('aria-label','Anotações do canalha');ta.value=canalhaAtual.anotacoes||'';ta.oninput=()=>{canalhaAtual.anotacoes=ta.value;marcarCanalha()};notes.append(ta);wrap.append(notes);
+  if(!publico){const arsenal=el('p','note','Mestre Arsenal: crie os capangas manualmente como canalhas comuns.');wrap.append(arsenal);const actions=el('div','npc-actions');const copy=el('button','btn','Copiar link do jogador');copy.onclick=async()=>{const ok=await copiar(location.origin+'/?canalha='+encodeURIComponent(canalhaAtualId)+'&chave='+encodeURIComponent(canalhaChave));toast(ok?'Link do jogador copiado.':'Não foi possível copiar o link.')};const renew=el('button','btn','Gerar novo link');renew.onclick=async()=>{if(!confirm('Gerar um novo link? O link atual deixará de funcionar.'))return;try{const r=await call('canalha_chave_nova',{id:canalhaAtualId});canalhaChave=r.chave;const c=canalhas.find(x=>x.id===canalhaAtualId);if(c)c.chave=r.chave;toast('Novo link gerado.')}catch(e){toast(e.message)}};actions.append(copy,renew);wrap.append(actions)}
+  const status=el('p','note','');status.id='canalha-save-status';status.textContent=canalhaDirty?'Salvando…':'Salvo';wrap.append(status);
+  nome.oninput=()=>{canalhaAtual.nome=nome.value;canalhaSnapshot='';marcarCanalha()};tipo.onchange=()=>{canalhaAtual.tipo=tipo.value;canalhaAtual.habilidades=[];canalhaSnapshot='';marcarCanalha();renderEditorCanalha(root,publico)};ndc.onchange=()=>{canalhaAtual.ndc=+ndc.value;canalhaAtual.vidaPerdida=Math.min(+canalhaAtual.vidaPerdida,maxVidaCanalha(canalhaAtual));canalhaAtual.habilidades=(canalhaAtual.habilidades||[]).slice(0,slotsCanalha(canalhaAtual.ndc));canalhaSnapshot='';marcarCanalha();renderEditorCanalha(root,publico)};
+  root.append(wrap);
+}
+function abrirCanalha(id){const c=canalhas.find(x=>x.id===id);if(!c)return;canalhaAtualId=id;canalhaChave=c.chave;canalhaAtual=lerCanalha(c.s);canalhaPublica=false;canalhaDirty=false;canalhaSnapshot=c.s;renderListaCanalhas()}
+function renderListaCanalhas(){
+  const root=$('canalha-manager');if(!root)return;root.innerHTML='';if(canalhaAtualId){renderEditorCanalha(root,false);return}
+  if(!canalhas.length){root.append(el('p','','Nenhum canalha criado ainda.'));return}
+  const grid=el('div','cards');canalhas.forEach(c=>{const s=lerCanalha(c.s),card=el('div','pc');card.append(el('h3','',s.nome||'Sem nome'),el('small','',(s.tipo||'Comum')+' · NdC '+s.ndc));const max=maxVidaCanalha(s);card.append(el('p','','Vida '+Math.max(0,max-(+s.vidaPerdida||0))+' de '+max+' · Dor '+(+s.dor||0)+' de 6'));card.append(el('p','','Defesa 5 · 1d6 + '+s.ndc+' · '+(+s.ndc+(s.tipo==='Especial'?3:1))+' ações'));const open=el('button','btn','Abrir ficha');open.onclick=()=>abrirCanalha(c.id);const copy=el('button','btn','Copiar link do jogador');copy.onclick=async()=>toast((await copiar(location.origin+'/?canalha='+encodeURIComponent(c.id)+'&chave='+encodeURIComponent(c.chave)))?'Link copiado.':'Não foi possível copiar o link.');const renew=el('button','btn','Gerar novo link');renew.onclick=async()=>{if(!confirm('Gerar um novo link? O link atual deixará de funcionar.'))return;try{const r=await call('canalha_chave_nova',{id:c.id});c.chave=r.chave;toast('Novo link gerado.')}catch(e){toast(e.message)}};const del=el('button','btn','Excluir canalha');del.style.borderColor='var(--blood)';del.style.color='var(--blood)';del.onclick=async()=>{if(!confirm('Excluir '+(s.nome||'este canalha')+'? Isso não pode ser desfeito.'))return;try{await call('canalha_excluir',{id:c.id});canalhas=canalhas.filter(x=>x.id!==c.id);renderListaCanalhas();toast('Canalha excluído.')}catch(e){toast(e.message)}};card.append(open,copy,renew,del);grid.append(card)});root.append(grid)
+}
+async function atualizarCanalhas(){
+  const versao=canalhaVersion,permitir=!!canalhaAtualId&&!canalhaPublica&&!canalhaDirty&&!canalhaTimer;const anterior=canalhas.find(c=>c.id===canalhaAtualId);const r=await call('canalha_listar');canalhas=r.canalhas||[];const atual=canalhas.find(c=>c.id===canalhaAtualId);
+  if(permitir&&versao===canalhaVersion&&!canalhaDirty&&!canalhaTimer&&atual&&atual.s!==canalhaSnapshot){canalhaAtual=lerCanalha(atual.s);canalhaChave=atual.chave;canalhaSnapshot=atual.s;renderListaCanalhas()}
+  else if(activeTab==='canalhas'&&!canalhaAtualId)renderListaCanalhas();
+}
+async function criarCanalha(){
+  try{const s=JSON.stringify(canalhaVazia()),r=await call('canalha_novo',{s});canalhas.push({id:r.id,chave:r.chave,s});abrirCanalha(r.id)}catch(e){toast(e.message)}
+}
+async function abrirCanalhaPublica(id,chave){
+  auth.mestre='';auth.id='';auth.token='';db=false;canalhaPublica=true;canalhaAtualId=id;canalhaChave=chave;show('canalha');$('bar').hidden=true;document.querySelector('.top').hidden=true;
+  try{const r=await call('canalha_ver',{id,chave});canalhaAtual=lerCanalha(r.s);canalhaSnapshot=r.s;renderEditorCanalha($('canalha-public'),true)}catch(e){$('canalha-public').textContent=e.message}
 }
 async function init(){
+  const params=new URLSearchParams(location.search);
+  if(params.has('canalha')){await abrirCanalhaPublica(params.get('canalha')||'',params.get('chave')||'');return}
   const m=location.hash.match(/^#acesso=([\w-]+)\.([\w-]+)$/);
   if(m){auth.id=m[1];auth.token=m[2];auth.mestre='';try{sessionStorage.removeItem('ficha-mestre');localStorage.setItem('ficha-acesso',JSON.stringify({id:m[1],token:m[2]}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
   show('mesa');$('mesa').innerHTML='<p>Conectando…</p>';
