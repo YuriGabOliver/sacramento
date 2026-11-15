@@ -350,7 +350,14 @@ async function atualizar(){
 }
 function montarMesa(){
   const box=$('mesa');box.innerHTML='';box.append(el('h2','','Mesa'));
-  const tools=el('div','bar');const bc=el('button','btn','Convidar jogadores');tools.append(bc);
+  const tools=el('div','bar');
+  const refresh=el('button','btn','Atualizar fichas');
+  refresh.onclick=async()=>{
+    refresh.disabled=true;refresh.textContent='Atualizando…';
+    try{await atualizar();toast('Fichas atualizadas.')}catch(e){toast('Falha ao atualizar: '+e.message)}
+    finally{refresh.disabled=false;refresh.textContent='Atualizar fichas'}
+  };
+  const bc=el('button','btn','Convidar jogadores');tools.append(refresh,bc);
   const sair=el('button','btn','Sair');sair.onclick=()=>{sessionStorage.removeItem('ficha-mestre');auth.mestre='';location.reload()};tools.append(sair);
   box.append(tools);
   const cv=el('div','conv');cv.hidden=true;
