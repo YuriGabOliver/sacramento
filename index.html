@@ -409,7 +409,7 @@ const HABILIDADES_CANALHA=[
   ['sina','Roubo de Sina','Em um Duelo, usa uma carta do oponente como se fosse sua; se ainda perder, morre instantaneamente.'],
   ['supremacia','Supremacia','Uma vez por combate, gasta ações para fazer aliados receberem ataques em seu lugar.']
 ];
-let canalhaSaveQueue=Promise.resolve();let canalhas=[],activeTab='jogadores',canalhaAtualId='',canalhaAtual=null,canalhaChave='',canalhaPublica=false,canalhaDirty=false,canalhaVersion=0,canalhaTimer=null,canalhaSnapshot='';
+let canalhaSaveQueue=Promise.resolve();let canalhas=[],activeTab='jogadores',canalhaAtualId='',canalhaAtual=null,canalhaChave='',canalhaPublica=false,canalhaDirty=false,canalhaVersion=0,canalhaTimer=null,canalhaSnapshot='',jogadorCanalhaNome='';
 const canalhaVazia=()=>({nome:'',tipo:'Comum',ndc:1,vidaPerdida:0,dor:0,habilidades:[],it:Array.from({length:10},()=>['','']),anotacoes:''});
 function lerCanalha(s){try{return Object.assign(canalhaVazia(),JSON.parse(s))}catch(e){return canalhaVazia()}}
 function slotsCanalha(n){return n<=2?1:n<=4?2:n===5?4:5}
@@ -437,8 +437,8 @@ function desenharCirculosCanalha(box,total,marcados,chave){
 }
 function renderEditorCanalha(root,publico){
   if(!root||!canalhaAtual)return;root.innerHTML='';const wrap=el('div','conv'),head=el('div','npc-actions');
-  if(!publico){const back=el('button','btn','Voltar à lista');back.onclick=async()=>{if(!await flushCanalha())return;canalhaAtualId='';canalhaAtual=null;canalhaChave='';renderListaCanalhas()};head.append(back)}
-  const title=el('h2','',publico?'Ficha de canalha':'Ficha do canalha');wrap.append(head,title);
+  if(!publico){const back=el('button','btn','Voltar à lista');back.onclick=async()=>{if(!await flushCanalha())return;canalhaAtualId='';canalhaAtual=null;canalhaChave='';jogadorCanalhaNome='';renderListaCanalhas()};head.append(back)}
+  const title=el('h2','',publico?'Ficha de canalha':'Ficha do canalha');const quem=publico?'Você entrou como '+(jogadorCanalhaNome||'jogador'):(jogadorCanalhaNome?'Controlado por '+jogadorCanalhaNome:'Aguardando jogador');wrap.append(head,title,el('p','note',quem));
   const form=el('div','form');
   const nl=el('label','','Nome do canalha');const nome=el('input');nome.type='text';nome.maxLength=60;nome.value=canalhaAtual.nome||'';nome.autocomplete='off';nl.append(nome);form.append(nl);
   const tl=el('label','','Tipo');const tipo=document.createElement('select');['Comum','Especial'].forEach(v=>{const o=el('option','',v);o.value=v;tipo.append(o)});tipo.value=canalhaAtual.tipo;tl.append(tipo);form.append(tl);
@@ -457,15 +457,16 @@ function renderEditorCanalha(root,publico){
   nome.oninput=()=>{canalhaAtual.nome=nome.value;canalhaSnapshot='';marcarCanalha()};tipo.onchange=()=>{canalhaAtual.tipo=tipo.value;canalhaAtual.habilidades=[];canalhaSnapshot='';marcarCanalha();renderEditorCanalha(root,publico)};ndc.onchange=()=>{canalhaAtual.ndc=+ndc.value;canalhaAtual.vidaPerdida=Math.min(+canalhaAtual.vidaPerdida,maxVidaCanalha(canalhaAtual));canalhaAtual.habilidades=(canalhaAtual.habilidades||[]).slice(0,slotsCanalha(canalhaAtual.ndc));canalhaSnapshot='';marcarCanalha();renderEditorCanalha(root,publico)};
   root.append(wrap);
 }
-function abrirCanalha(id){const c=canalhas.find(x=>x.id===id);if(!c)return;canalhaAtualId=id;canalhaChave=c.chave;canalhaAtual=lerCanalha(c.s);canalhaPublica=false;canalhaDirty=false;canalhaSnapshot=c.s;renderListaCanalhas()}
+function abrirCanalha(id){const c=canalhas.find(x=>x.id===id);if(!c)return;canalhaAtualId=id;canalhaChave=c.chave;canalhaAtual=lerCanalha(c.s);jogadorCanalhaNome=c.jogadorNome||'';canalhaPublica=false;canalhaDirty=false;canalhaSnapshot=c.s;renderListaCanalhas()}
 function renderListaCanalhas(){
   const root=$('canalha-manager');if(!root)return;root.innerHTML='';if(canalhaAtualId){renderEditorCanalha(root,false);return}
   if(!canalhas.length){root.append(el('p','','Nenhum canalha criado ainda.'));return}
-  const grid=el('div','cards');canalhas.forEach(c=>{const s=lerCanalha(c.s),card=el('div','pc');card.append(el('h3','',s.nome||'Sem nome'),el('small','',(s.tipo||'Comum')+' · NdC '+s.ndc));const max=maxVidaCanalha(s);card.append(el('p','','Vida '+Math.max(0,max-(+s.vidaPerdida||0))+' de '+max+' · Dor '+(+s.dor||0)+' de 6'));card.append(el('p','','Defesa 5 · 1d6 + '+s.ndc+' · '+(+s.ndc+(s.tipo==='Especial'?3:1))+' ações'));const open=el('button','btn','Abrir ficha');open.onclick=()=>abrirCanalha(c.id);const copy=el('button','btn','Copiar link do jogador');copy.onclick=async()=>toast((await copiar(location.origin+'/?canalha='+encodeURIComponent(c.id)+'&chave='+encodeURIComponent(c.chave)))?'Link copiado.':'Não foi possível copiar o link.');const renew=el('button','btn','Gerar novo link');renew.onclick=async()=>{if(!confirm('Gerar um novo link? O link atual deixará de funcionar.'))return;try{const r=await call('canalha_chave_nova',{id:c.id});c.chave=r.chave;toast('Novo link gerado.')}catch(e){toast(e.message)}};const del=el('button','btn','Excluir canalha');del.style.borderColor='var(--blood)';del.style.color='var(--blood)';del.onclick=async()=>{if(!confirm('Excluir '+(s.nome||'este canalha')+'? Isso não pode ser desfeito.'))return;try{await call('canalha_excluir',{id:c.id});canalhas=canalhas.filter(x=>x.id!==c.id);renderListaCanalhas();toast('Canalha excluído.')}catch(e){toast(e.message)}};card.append(open,copy,renew,del);grid.append(card)});root.append(grid)
+  const grid=el('div','cards');canalhas.forEach(c=>{const s=lerCanalha(c.s),card=el('div','pc');card.append(el('h3','',s.nome||'Sem nome'),el('small','',(s.tipo||'Comum')+' · NdC '+s.ndc),el('small','',c.jogadorNome?'Jogador: '+c.jogadorNome:'Aguardando jogador'));const max=maxVidaCanalha(s);card.append(el('p','','Vida '+Math.max(0,max-(+s.vidaPerdida||0))+' de '+max+' · Dor '+(+s.dor||0)+' de 6'));card.append(el('p','','Defesa 5 · 1d6 + '+s.ndc+' · '+(+s.ndc+(s.tipo==='Especial'?3:1))+' ações'));const open=el('button','btn','Abrir ficha');open.onclick=()=>abrirCanalha(c.id);const copy=el('button','btn','Copiar link do jogador');copy.onclick=async()=>toast((await copiar(location.origin+'/?canalha='+encodeURIComponent(c.id)+'&chave='+encodeURIComponent(c.chave)))?'Link copiado.':'Não foi possível copiar o link.');const renew=el('button','btn','Gerar novo link');renew.onclick=async()=>{if(!confirm('Gerar um novo link? O link atual deixará de funcionar.'))return;try{const r=await call('canalha_chave_nova',{id:c.id});c.chave=r.chave;toast('Novo link gerado.')}catch(e){toast(e.message)}};const del=el('button','btn','Excluir canalha');del.style.borderColor='var(--blood)';del.style.color='var(--blood)';del.onclick=async()=>{if(!confirm('Excluir '+(s.nome||'este canalha')+'? Isso não pode ser desfeito.'))return;try{await call('canalha_excluir',{id:c.id});canalhas=canalhas.filter(x=>x.id!==c.id);renderListaCanalhas();toast('Canalha excluído.')}catch(e){toast(e.message)}};card.append(open,copy,renew,del);grid.append(card)});root.append(grid)
 }
 async function atualizarCanalhas(){
-  const versao=canalhaVersion,permitir=!!canalhaAtualId&&!canalhaPublica&&!canalhaDirty&&!canalhaTimer;const anterior=canalhas.find(c=>c.id===canalhaAtualId);const r=await call('canalha_listar');canalhas=r.canalhas||[];const atual=canalhas.find(c=>c.id===canalhaAtualId);
-  if(permitir&&versao===canalhaVersion&&!canalhaDirty&&!canalhaTimer&&atual&&atual.s!==canalhaSnapshot){canalhaAtual=lerCanalha(atual.s);canalhaChave=atual.chave;canalhaSnapshot=atual.s;renderListaCanalhas()}
+  const versao=canalhaVersion,permitir=!!canalhaAtualId&&!canalhaPublica&&!canalhaDirty&&!canalhaTimer;const r=await call('canalha_listar');canalhas=r.canalhas||[];const atual=canalhas.find(c=>c.id===canalhaAtualId);
+  const mudou=atual&&(atual.s!==canalhaSnapshot||(atual.jogadorNome||'')!==jogadorCanalhaNome);
+  if(permitir&&versao===canalhaVersion&&!canalhaDirty&&!canalhaTimer&&mudou){canalhaAtual=lerCanalha(atual.s);canalhaChave=atual.chave;jogadorCanalhaNome=atual.jogadorNome||'';canalhaSnapshot=atual.s;renderListaCanalhas()}
   else if(activeTab==='canalhas'&&!canalhaAtualId)renderListaCanalhas();
 }
 async function criarCanalha(){
@@ -473,7 +474,14 @@ async function criarCanalha(){
 }
 async function abrirCanalhaPublica(id,chave){
   auth.mestre='';auth.id='';auth.token='';db=false;canalhaPublica=true;canalhaAtualId=id;canalhaChave=chave;show('canalha');$('bar').hidden=true;document.querySelector('.top').hidden=true;
-  try{const r=await call('canalha_ver',{id,chave});canalhaAtual=lerCanalha(r.s);canalhaSnapshot=r.s;renderEditorCanalha($('canalha-public'),true)}catch(e){$('canalha-public').textContent=e.message}
+  const root=$('canalha-public');root.innerHTML='';
+  try{
+    const ficha=await call('canalha_ver',{id,chave});canalhaAtual=lerCanalha(ficha.s);canalhaSnapshot=ficha.s;
+    const box=el('div','conv');box.append(el('h2','','Entrar como jogador'),el('p','','Informe seu nome para o mestre saber quem está usando esta ficha de canalha.'));
+    const form=el('div','form'),nome=campo(form,'Seu nome','text');nome.maxLength=40;nome.autocomplete='name';
+    const entrar=el('button','btn','Entrar como jogador');const submit=async()=>{const jogadorNome=nome.value.trim();if(!jogadorNome){toast('Digite seu nome para entrar.');nome.focus();return}entrar.disabled=true;try{const r=await call('canalha_entrar',{id,chave,nome:jogadorNome});canalhaAtual=lerCanalha(r.s);canalhaSnapshot=r.s;jogadorCanalhaNome=r.jogadorNome;renderEditorCanalha(root,true)}catch(e){toast(e.message)}finally{entrar.disabled=false}};
+    entrar.onclick=submit;nome.onkeydown=e=>{if(e.key==='Enter')submit()};form.append(entrar);box.append(form);root.append(box);nome.focus();
+  }catch(e){root.textContent=e.message}
 }
 async function init(){
   const params=new URLSearchParams(location.search);
