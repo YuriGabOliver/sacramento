@@ -86,6 +86,7 @@ details{margin-top:18px}summary{cursor:pointer;min-height:44px;display:flex;alig
 <section class="wide" id="mesa"><p>Conectando…</p></section>
 <section class="wide" id="canalha-sheet" hidden><div id="canalha-public"></div></section>
 <section class="wide"><label for="nome">Nome do personagem</label><input type="text" id="nome" data-k="nome" autocomplete="off"></section>
+<section class="wide" id="progressao"></section>
 
 <section>
  <h2>Atributos</h2>
@@ -159,14 +160,14 @@ const KEY='ficha-velho-oeste-v1';
 const FID=['Montaria estranha: sem bônus.','Atende quando chamada pelo nome.','Ganha +1 ponto em um dos dois atributos à sua escolha.','Quando chamada, vai até você se estiver dentro de 500 m de raio.','Sem penalidades para saltar obstáculos perigosos.','Ganha +1 ponto em um dos dois atributos à sua escolha.'];
 const ATR=[['fis','Físico','+1 Círculo de Vida por ponto'],['vel','Velocidade','+1 Movimento por ponto'],['int','Intelecto','+1 ponto de Antecedente por ponto'],['cor','Coragem','+1 Ação de Combate por ponto']];
 const ANT=[['atencao','Atenção'],['roubo','Roubo'],['medicina','Medicina'],['suor','Suor'],['montaria','Montaria'],['tradicao','Tradição'],['negocios','Negócios'],['violencia','Violência']];
-const blank=()=>({nome:'',ini:'',hab:'',mNome:'',fid:'0',n:{fis:0,vel:0,int:0,cor:0,pot:0,res:0},ant:{},lost:0,dor:0,mLost:0,mDor:0,
+const blank=()=>({nome:'',ini:'',hab:'',mNome:'',fid:'0',xp:0,nivelAplicado:1,vidaNivel:{},n:{fis:0,vel:0,int:0,cor:0,pot:0,res:0},ant:{},lost:0,dor:0,mLost:0,mDor:0,
   it:Array.from({length:10},()=>['','']),ar:Array.from({length:4},()=>['','',''])});
 const $=id=>document.getElementById(id);
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
 const toast=m=>{const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,4500)};
 const stat=t=>{const e=$('st');if(e)e.textContent=t};
 const parse=s=>{try{return Object.assign(blank(),JSON.parse(s))}catch(e){return blank()}};
-let S=blank(),db=null,usr=null,me=null,isGM=false,cur=null,docs={},tm=null,editVersion=0,masterDirty=false;
+let S=blank(),db=null,usr=null,me=null,isGM=false,cur=null,docs={},tm=null,editVersion=0,masterDirty=false,requestedCharId='';
 function save(){
   if(!db||!cur){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}return}
   if(isGM){editVersion++;masterDirty=true}
@@ -207,10 +208,30 @@ function budget(node,used,tot,txt){
   node.textContent='';const s=el('span',used>tot?'over':'',used+' de '+tot);
   node.append(txt+': ',s,used>tot?' (passou do limite)':'');
 }
+const XP_NIVEIS=[0,10,20,30,45,65];
+function nivelPorXp(xp){let n=1;for(let i=1;i<XP_NIVEIS.length;i++)if(xp>=XP_NIVEIS[i])n=i+1;return n}
+function recompensasNivel(n){return {atributos:[3,4,5,6].includes(n)?1:0,antecedentes:n===2?1:0,habilidades:[2,3,4,6].includes(n)?1:0,vida:[2,4,5].includes(n)?Math.max(1,+S.n.fis||0):n===6?3:0}}
+function totalVidaNivel(s=S){const ganhos=s.vidaNivel&&typeof s.vidaNivel==='object'?s.vidaNivel:{};return Object.values(ganhos).reduce((t,v)=>t+(+v||0),0)}
+function aplicarProximoNivel(){const atual=Math.max(1,Math.min(6,+S.nivelAplicado||1)),alvo=nivelPorXp(+S.xp||0);if(atual>=alvo){toast('Ainda não há nível novo disponível.');return}const prox=atual+1,r=recompensasNivel(prox);S.nivelAplicado=prox;S.nivelAplicado=Math.min(6,S.nivelAplicado);S.vidaNivel=S.vidaNivel&&typeof S.vidaNivel==='object'?S.vidaNivel:{};if(r.vida)S.vidaNivel[prox]=r.vida;save();render();toast('Nível '+prox+' aplicado. Confira os pontos e a habilidade liberados.')}
+function renderProgressao(){
+ const box=$('progressao');if(!box)return;box.innerHTML='';
+ const nivel=Math.max(1,Math.min(6,+S.nivelAplicado||1)),alvo=nivelPorXp(+S.xp||0),xp=Math.max(0,+S.xp||0),prox=XP_NIVEIS[nivel]||null;
+ box.append(el('h2','','Progressão do personagem'));
+ const info=el('p','budget','Nível '+nivel+' aplicado · '+xp+' XP'+(prox===null?' · nível máximo': ' · faltam '+Math.max(0,prox-xp)+' XP para o nível '+(nivel+1)));box.append(info);
+ const controle=el('div','row'),lab=el('label','','XP total');lab.htmlFor='xp-total';const input=document.createElement('input');input.id='xp-total';input.type='number';input.min='0';input.max='999';input.value=xp;input.inputMode='numeric';input.setAttribute('aria-label','XP total');input.onchange=()=>{S.xp=Math.max(0,Math.min(999,+input.value||0));save();render()};controle.append(lab,input);box.append(controle);
+ const perguntas=[['sobreviveu','Sobreviveu à sessão?'],['dinheiro','Conseguiu mais dinheiro?'],['ajudou','Ajudou o bando?'],['problema','Resolveu o problema de alguém?'],['carta','Terminou com uma Carta de Sina?']];
+ const checks=el('div','form');perguntas.forEach(([k,t])=>{const l=el('label','row',t),c=document.createElement('input');c.type='checkbox';c.setAttribute('aria-label',t);l.append(c);checks.append(l)});
+ const xpBtn=el('button','btn','Registrar XP da sessão');xpBtn.onclick=()=>{const ganho=[...checks.querySelectorAll('input')].filter(x=>x.checked).length;if(!ganho){toast('Marque pelo menos uma resposta “sim”.');return}S.xp=xp+ganho;save();render();toast('Adicionados '+ganho+' XP.')};checks.append(xpBtn);box.append(checks);
+ const totalAtr=4+[3,4,5,6].filter(n=>n<=nivel).length,usadosAtr=S.n.fis+S.n.vel+S.n.int+S.n.cor,totalAnt=4+(+S.n.int||0)+(nivel>=2?1:0),usadosAnt=Object.values(S.ant||{}).reduce((t,v)=>t+(+v||0),0);
+ const stats=el('p','note','Pontos de atributo: '+Math.max(0,totalAtr-usadosAtr)+' disponíveis de '+totalAtr+'. Antecedentes: '+Math.max(0,totalAnt-usadosAnt)+' disponíveis de '+totalAnt+'. Habilidades liberadas pela progressão: '+[2,3,4,6].filter(n=>n<=nivel).length+' no total; escolha/registre cada uma no campo Habilidades conforme as opções do livro.');box.append(stats);
+ if(alvo>nivel){const r=recompensasNivel(nivel+1),list=[];if(r.atributos)list.push('+1 ponto de atributo');if(r.antecedentes)list.push('+1 ponto de antecedente');if(r.habilidades)list.push('+1 habilidade');if(r.vida)list.push('+'+r.vida+' círculos máximos de vida');box.append(el('p','note','Próximo marco: nível '+(nivel+1)+' — '+list.join(', ')+'.'));const btn=el('button','btn','Aplicar nível '+(nivel+1));btn.onclick=aplicarProximoNivel;box.append(btn)}
+ box.append(el('p','note','O nível sobe quando o Juiz concede XP suficiente. Aplique cada nível uma vez para liberar as recompensas; o bônus de vida fica registrado pelo valor concedido naquele momento.'));
+}
 function render(){
-  const n=S.n,vida=6+n.fis,mov=1+n.vel,acao=1+n.cor,antPts=4+n.int,mVida=6+n.res;
+  const n=S.n,nivel=Math.max(1,Math.min(6,+S.nivelAplicado||1)),vida=6+n.fis+totalVidaNivel(),mov=1+n.vel,acao=1+n.cor,antPts=4+n.int+(nivel>=2?1:0),mVida=6+n.res;
+  renderProgressao();
   stepper($('atr'),ATR,4);
-  budget($('bAtr'),n.fis+n.vel+n.int+n.cor,4,'Pontos de atributo usados');
+  budget($('bAtr'),n.fis+n.vel+n.int+n.cor,4+[3,4,5,6].filter(x=>x<=nivel).length,'Pontos de atributo usados');
   $('sVida').textContent=vida;$('sMov').textContent=mov;$('sAcao').textContent=acao;
   // antecedentes
   const A=$('ant');A.innerHTML='';let usados=0;
@@ -218,7 +239,7 @@ function render(){
     const v=S.ant[k]||0;usados+=v;
     const d=el('div','skill'),h=el('div');h.append(el('b','',nome),el('small','','1d6+'+v));
     const box=el('div','dots');
-    dots(box,5,v,true,x=>{S.ant[k]=x},nome);
+    dots(box,5,v,true,x=>{S.ant[k]=nivel===1?Math.min(2,x):x},nome);
     d.append(h,box);A.append(d);
   });
   budget($('bAnt'),usados,antPts,'Pontos de antecedente usados');
@@ -272,7 +293,7 @@ function bar(){
     docs[me.id].chars=chars;
     try{await call('salvar',{alvo:me.id,chars})}catch(e){toast('Não foi possível excluir.')}
     openChar(me.id,Object.keys(chars)[0])};
-  const lk=el('button','btn','Meu link de acesso');lk.onclick=()=>{copiar(location.origin+'/#acesso='+auth.id+'.'+auth.token);toast('Link copiado. Guarde-o: quem tiver esse link entra como você, em qualquer aparelho.')};
+  const lk=el('button','btn','Link permanente desta ficha');lk.onclick=async()=>{const ok=await copiar(location.origin+'/#acesso='+auth.id+'.'+auth.token+'.'+cur.id);toast(ok?'Link permanente desta ficha copiado. Guarde-o para abrir este personagem em qualquer aparelho.':'Não foi possível copiar o link.')};
   b.append(sel,n,x,lk,st);
 }
 let curName='';
@@ -286,7 +307,7 @@ function panel(){
     const ids=Object.keys(docs[u].chars||{});
     if(!ids.length){const c=el('div','pc');c.append(el('h3','',docs[u].nome),el('small','','ainda sem ficha'));g.append(c)}
     ids.forEach(id=>{
-      const s=parse(docs[u].chars[id].s),n=s.n,v=6+n.fis,mv=6+n.res,lost=Math.min(s.lost,v),mlost=Math.min(s.mLost,mv);
+      const s=parse(docs[u].chars[id].s),n=s.n,v=6+n.fis+totalVidaNivel(s),mv=6+n.res,lost=Math.min(s.lost,v),mlost=Math.min(s.mLost,mv);
       const c=el('div','pc');
       c.append(el('h3','',docs[u].chars[id].nome||'Sem nome'),el('small','',docs[u].nome||'Jogador'));
       c.append(el('p','','Vida '+(v-lost)+' de '+v),pips(v,v-lost,false));
@@ -461,7 +482,7 @@ function abrirCanalha(id){const c=canalhas.find(x=>x.id===id);if(!c)return;canal
 function renderListaCanalhas(){
   const root=$('canalha-manager');if(!root)return;root.innerHTML='';if(canalhaAtualId){renderEditorCanalha(root,false);return}
   if(!canalhas.length){root.append(el('p','','Nenhum canalha criado ainda.'));return}
-  const grid=el('div','cards');canalhas.forEach(c=>{const s=lerCanalha(c.s),card=el('div','pc');card.append(el('h3','',s.nome||'Sem nome'),el('small','',(s.tipo||'Comum')+' · NdC '+s.ndc),el('small','',c.jogadorNome?'Jogador: '+c.jogadorNome:'Aguardando jogador'));const max=maxVidaCanalha(s);card.append(el('p','','Vida '+Math.max(0,max-(+s.vidaPerdida||0))+' de '+max+' · Dor '+(+s.dor||0)+' de 6'));card.append(el('p','','Defesa 5 · 1d6 + '+s.ndc+' · '+(+s.ndc+(s.tipo==='Especial'?3:1))+' ações'));const open=el('button','btn','Abrir ficha');open.onclick=()=>abrirCanalha(c.id);const copy=el('button','btn','Copiar link do jogador');copy.onclick=async()=>toast((await copiar(location.origin+'/?canalha='+encodeURIComponent(c.id)+'&chave='+encodeURIComponent(c.chave)))?'Link copiado.':'Não foi possível copiar o link.');const renew=el('button','btn','Gerar novo link');renew.onclick=async()=>{if(!confirm('Gerar um novo link? O link atual deixará de funcionar.'))return;try{const r=await call('canalha_chave_nova',{id:c.id});c.chave=r.chave;toast('Novo link gerado.')}catch(e){toast(e.message)}};const del=el('button','btn','Excluir canalha');del.style.borderColor='var(--blood)';del.style.color='var(--blood)';del.onclick=async()=>{if(!confirm('Excluir '+(s.nome||'este canalha')+'? Isso não pode ser desfeito.'))return;try{await call('canalha_excluir',{id:c.id});canalhas=canalhas.filter(x=>x.id!==c.id);renderListaCanalhas();toast('Canalha excluído.')}catch(e){toast(e.message)}};card.append(open,copy,renew,del);grid.append(card)});root.append(grid)
+  const grid=el('div','cards');canalhas.forEach(c=>{const s=lerCanalha(c.s),card=el('div','pc');card.append(el('h3','',s.nome||'Sem nome'),el('small','',(s.tipo||'Comum')+' · NdC '+s.ndc),el('small','',c.jogadorNome?'Jogador: '+c.jogadorNome:'Aguardando jogador'));const max=maxVidaCanalha(s);card.append(el('p','','Vida '+Math.max(0,max-(+s.vidaPerdida||0))+' de '+max+' · Dor '+(+s.dor||0)+' de 6'));card.append(el('p','','Defesa 5 · 1d6 + '+s.ndc+' · '+(+s.ndc+(s.tipo==='Especial'?3:1))+' ações'));const open=el('button','btn','Abrir ficha');open.onclick=()=>abrirCanalha(c.id);const copy=el('button','btn','Copiar link permanente do jogador');copy.onclick=async()=>toast((await copiar(location.origin+'/?canalha='+encodeURIComponent(c.id)+'&chave='+encodeURIComponent(c.chave)))?'Link permanente copiado. Guarde-o para voltar a esta ficha.':'Não foi possível copiar o link.');const renew=el('button','btn','Gerar novo link');renew.onclick=async()=>{if(!confirm('Gerar um novo link? O link atual deixará de funcionar.'))return;try{const r=await call('canalha_chave_nova',{id:c.id});c.chave=r.chave;toast('Novo link gerado.')}catch(e){toast(e.message)}};const del=el('button','btn','Excluir canalha');del.style.borderColor='var(--blood)';del.style.color='var(--blood)';del.onclick=async()=>{if(!confirm('Excluir '+(s.nome||'este canalha')+'? Isso não pode ser desfeito.'))return;try{await call('canalha_excluir',{id:c.id});canalhas=canalhas.filter(x=>x.id!==c.id);renderListaCanalhas();toast('Canalha excluído.')}catch(e){toast(e.message)}};card.append(open,copy,renew,del);grid.append(card)});root.append(grid)
 }
 async function atualizarCanalhas(){
   const versao=canalhaVersion,permitir=!!canalhaAtualId&&!canalhaPublica&&!canalhaDirty&&!canalhaTimer;const r=await call('canalha_listar');canalhas=r.canalhas||[];const atual=canalhas.find(c=>c.id===canalhaAtualId);
@@ -486,8 +507,8 @@ async function abrirCanalhaPublica(id,chave){
 async function init(){
   const params=new URLSearchParams(location.search);
   if(params.has('canalha')){await abrirCanalhaPublica(params.get('canalha')||'',params.get('chave')||'');return}
-  const m=location.hash.match(/^#acesso=([\w-]+)\.([\w-]+)$/);
-  if(m){auth.id=m[1];auth.token=m[2];auth.mestre='';try{sessionStorage.removeItem('ficha-mestre');localStorage.setItem('ficha-acesso',JSON.stringify({id:m[1],token:m[2]}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
+  const m=location.hash.match(/^#acesso=([\w-]+)\.([\w-]+)(?:\.([\w-]+))?$/);
+  if(m){auth.id=m[1];auth.token=m[2];requestedCharId=m[3]||'';auth.mestre='';try{sessionStorage.removeItem('ficha-mestre');localStorage.setItem('ficha-acesso',JSON.stringify({id:m[1],token:m[2]}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
   show('mesa');$('mesa').innerHTML='<p>Conectando…</p>';
   let eu=null;
   if(auth.mestre||auth.id){
@@ -511,7 +532,8 @@ async function init(){
     let first=blank();try{const x=localStorage.getItem(KEY);if(x)first=parse(x)}catch(e){}
     const id=newId();docs[me.id].chars[id]={s:JSON.stringify(first),nome:first.nome||'Sem nome'};cur={uid:me.id,id};S=first;await flush();
   }
-  openChar(me.id,Object.keys(docs[me.id].chars)[0]);
+  const ids=Object.keys(docs[me.id].chars),destino=requestedCharId&&docs[me.id].chars[requestedCharId]?requestedCharId:ids[0];requestedCharId='';
+  openChar(me.id,destino);
 }
 window.addEventListener('pagehide',()=>{if(tm)flush()});
 init();
