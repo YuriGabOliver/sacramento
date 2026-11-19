@@ -294,7 +294,7 @@ function bar(){
     try{await call('salvar',{alvo:me.id,chars})}catch(e){toast('Não foi possível excluir.')}
     openChar(me.id,Object.keys(chars)[0])};
   const lk=el('button','btn','Link permanente desta ficha');lk.onclick=async()=>{const ok=await copiar(location.origin+'/#acesso='+auth.id+'.'+auth.token+'.'+cur.id);toast(ok?'Link permanente desta ficha copiado. Guarde-o para abrir este personagem em qualquer aparelho.':'Não foi possível copiar o link.')};
-  b.append(sel,n,x,lk,st);
+  if(me.fichaId)b.append(sel,lk,st);else b.append(sel,n,x,lk,st);
 }
 let curName='';
 const pips=(tot,on,hurt)=>{const d=el('div','pips');for(let i=0;i<tot;i++)d.append(el('span','pip'+(i<on?' on':'')+(hurt?' hurt':'')));return d};
@@ -314,7 +314,8 @@ function panel(){
       c.append(el('p','','Dor '+s.dor+' de 6'),pips(6,s.dor,true));
       if(s.mNome||n.pot||n.res||s.mLost||s.mDor)c.append(el('p','','Montaria'+(s.mNome?' ('+s.mNome+')':'')+': vida '+(mv-mlost)+' de '+mv+', dor '+s.mDor+' de 6'));
       const o=el('button','btn','Abrir ficha');o.onclick=()=>{curName=docs[u].nome;openChar(u,id)};
-      c.append(o);
+      const lk=el('button','btn','Copiar link permanente');lk.onclick=async()=>{lk.disabled=true;try{const r=await call('link_ficha',{alvo:u,id});const ok=await copiar(location.origin+'/#acesso='+u+'.'+r.token+'.'+id);toast(ok?'Link permanente da ficha copiado.':'Não foi possível copiar o link.')}catch(e){toast(e.message)}finally{lk.disabled=false}};
+      c.append(o,lk);
       const x=el('button','btn','Excluir ficha');x.style.borderColor='var(--blood)';x.style.color='var(--blood)';
       x.onclick=async()=>{
         if(!confirm('Excluir a ficha "'+(docs[u].chars[id].nome||'Sem nome')+'" de '+(docs[u].nome||'jogador')+'? Isso não pode ser desfeito.'))return;
@@ -337,8 +338,8 @@ function panel(){
   box.append(lj);
 }
 const copiar=async t=>{try{await navigator.clipboard.writeText(t);return true}catch(e){return false}};
-const auth={mestre:'',id:'',token:''};
-try{auth.mestre=sessionStorage.getItem('ficha-mestre')||'';const a=JSON.parse(localStorage.getItem('ficha-acesso')||'null');if(a&&a.id){auth.id=a.id;auth.token=a.token}}catch(e){}
+const auth={mestre:'',id:'',token:'',fichaId:''};
+try{auth.mestre=sessionStorage.getItem('ficha-mestre')||'';const a=JSON.parse(localStorage.getItem('ficha-acesso')||localStorage.getItem('ficha-link')||'null');if(a&&a.id){auth.id=a.id;auth.token=a.token;requestedCharId=a.fichaId||''}}catch(e){}
 async function call(acao,dados){
   const hd={'content-type':'application/json'};
   if(auth.mestre)hd['x-mestre']=auth.mestre;
@@ -508,7 +509,7 @@ async function init(){
   const params=new URLSearchParams(location.search);
   if(params.has('canalha')){await abrirCanalhaPublica(params.get('canalha')||'',params.get('chave')||'');return}
   const m=location.hash.match(/^#acesso=([\w-]+)\.([\w-]+)(?:\.([\w-]+))?$/);
-  if(m){auth.id=m[1];auth.token=m[2];requestedCharId=m[3]||'';auth.mestre='';try{sessionStorage.removeItem('ficha-mestre');localStorage.setItem('ficha-acesso',JSON.stringify({id:m[1],token:m[2]}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
+  if(m){auth.id=m[1];auth.token=m[2];requestedCharId=m[3]||'';auth.mestre='';try{sessionStorage.removeItem('ficha-mestre');if(requestedCharId)localStorage.setItem('ficha-link',JSON.stringify({id:m[1],token:m[2],fichaId:requestedCharId}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
   show('mesa');$('mesa').innerHTML='<p>Conectando…</p>';
   let eu=null;
   if(auth.mestre||auth.id){
@@ -525,10 +526,12 @@ async function init(){
     if(!init.t)init.t=setInterval(()=>{if(!document.hidden&&isGM)atualizar().catch(()=>{})},3000);
     return;
   }
-  me={id:eu.id,nome:eu.nome};
+  me={id:eu.id,nome:eu.nome,fichaId:eu.fichaId||''};auth.fichaId=me.fichaId;
+  if(!eu.fichaId)try{localStorage.setItem('ficha-acesso',JSON.stringify({id:auth.id,token:auth.token}))}catch(e){}
   let r;try{r=await call('minhas')}catch(e){toast(e.message);r={chars:{}}}
   docs[me.id]={nome:eu.nome,chars:r.chars||{}};
   if(!Object.keys(docs[me.id].chars).length){
+    if(me.fichaId){$('mesa').textContent='Esta ficha foi removida ou o link não está mais válido. Peça um novo link ao mestre.';return}
     let first=blank();try{const x=localStorage.getItem(KEY);if(x)first=parse(x)}catch(e){}
     const id=newId();docs[me.id].chars[id]={s:JSON.stringify(first),nome:first.nome||'Sem nome'};cur={uid:me.id,id};S=first;await flush();
   }

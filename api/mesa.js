@@ -36,6 +36,11 @@ module.exports = async (req, res) => {
     if (!ehMestre && idOk(h['x-jogador'])) {
       const o = lerJson(await cmd('GET', 'jog:' + h['x-jogador']));
       if (o && igual(sha(h['x-token'] || ''), o.th)) jog = { id: h['x-jogador'], nome: o.nome };
+      else if (o && o.links && typeof o.links === 'object') {
+        const tokenHash = sha(h['x-token'] || '');
+        const entrada = Object.entries(o.links).find(([, link]) => link && igual(tokenHash, link.th));
+        if (entrada) jog = { id: h['x-jogador'], nome: o.nome, fichaId: entrada[0] };
+      }
     }
 
     switch (b.acao) {
@@ -51,7 +56,7 @@ module.exports = async (req, res) => {
       }
       case 'eu':
         if (ehMestre) return res.json({ papel: 'mestre' });
-        if (jog) return res.json({ papel: 'jogador', id: jog.id, nome: jog.nome });
+        if (jog) return res.json({ papel: 'jogador', id: jog.id, nome: jog.nome, fichaId: jog.fichaId || '' });
         return erro(401, 'Não autorizado.');
       case 'convite': {
         if (!ehMestre) return erro(401, 'Só o mestre pode convidar.');
@@ -62,7 +67,8 @@ module.exports = async (req, res) => {
       case 'minhas': {
         if (!jog) return erro(401, 'Não autorizado.');
         const f = lerJson(await cmd('GET', 'fichas:' + jog.id)) || { chars: {} };
-        return res.json({ nome: jog.nome, chars: f.chars || {} });
+        const chars = f.chars || {};
+        return res.json({ nome: jog.nome, chars: jog.fichaId ? (chars[jog.fichaId] ? { [jog.fichaId]: chars[jog.fichaId] } : {}) : chars });
       }
       case 'listar': {
         if (!ehMestre) return erro(401, 'Só o mestre pode ver a mesa.');
@@ -80,11 +86,17 @@ module.exports = async (req, res) => {
         const alvo = ehMestre ? b.alvo : jog.id;
         if (!idOk(alvo)) return erro(400, 'Jogador inválido.');
         if (ehMestre && !(await cmd('SISMEMBER', 'jogadores', alvo))) return erro(404, 'Jogador não encontrado.');
-        const chars = b.chars;
+        let chars = b.chars;
         if (!chars || typeof chars !== 'object' || Array.isArray(chars)) return erro(400, 'Dados inválidos.');
         const ks = Object.keys(chars);
-        if (ks.length > 30) return erro(400, 'Fichas demais.');
-        for (const k of ks) {
+        if (jog && jog.fichaId) {
+          if (ks.length !== 1 || ks[0] !== jog.fichaId) return erro(403, 'Este link so pode alterar a ficha vinculada.');
+          const f = lerJson(await cmd('GET', 'fichas:' + alvo)) || { chars: {} };
+          chars = Object.assign({}, f.chars || {}, { [jog.fichaId]: chars[jog.fichaId] });
+        }
+        const todos = Object.keys(chars);
+        if (todos.length > 30) return erro(400, 'Fichas demais.');
+        for (const k of todos) {
           if (!idOk(k) || typeof chars[k].s !== 'string' || typeof chars[k].nome !== 'string') return erro(400, 'Ficha inválida.');
         }
         const txt = JSON.stringify({ chars });
@@ -105,8 +117,26 @@ module.exports = async (req, res) => {
         const chars = Object.assign({}, f.chars);
         if (!Object.prototype.hasOwnProperty.call(chars, b.id)) return erro(404, 'Ficha não encontrada.');
         delete chars[b.id];
+        const user = lerJson(await cmd('GET', 'jog:' + b.alvo));
+        if (user && user.links && user.links[b.id]) { delete user.links[b.id]; await cmd('SET', 'jog:' + b.alvo, JSON.stringify(user)); }
         await cmd('SET', 'fichas:' + b.alvo, JSON.stringify({ chars }));
         return res.json({ ok: true });
+      }
+      case 'link_ficha': {
+        if (!ehMestre) return erro(401, 'Só o mestre pode gerar links de ficha.');
+        if (!idOk(b.alvo) || !idOk(b.id)) return erro(400, 'Ficha inválida.');
+        const [userRaw, fichaRaw] = await Promise.all([cmd('GET', 'jog:' + b.alvo), cmd('GET', 'fichas:' + b.alvo)]);
+        const user = lerJson(userRaw), ficha = lerJson(fichaRaw);
+        if (!user || !ficha || !ficha.chars || !Object.prototype.hasOwnProperty.call(ficha.chars, b.id)) return erro(404, 'Ficha não encontrada.');
+        user.links = user.links && typeof user.links === 'object' ? user.links : {};
+        let link = user.links[b.id];
+        if (!link || typeof link.token !== 'string' || typeof link.th !== 'string') {
+          const token = rnd(24);
+          link = { token, th: sha(token) };
+          user.links[b.id] = link;
+          await cmd('SET', 'jog:' + b.alvo, JSON.stringify(user));
+        }
+        return res.json({ token: link.token });
       }
       case 'canalha_novo': {
         if (!ehMestre) return erro(401, 'Só o mestre pode criar canalhas.');
